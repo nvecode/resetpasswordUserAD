@@ -35,28 +35,30 @@ if (empty($account_password)) {
 //Проверка логина администратора
 include 'auth.php';
 
-foreach ($accountsAdm as $accountAdm) {
-  if ($accountAdm['login'] == $admin_login) {
-    if ($accountAdm['password'] == $admin_password) {
-      $admingro = $admin_login;
-    }
+$found = false;
 
-    else {
-      $_SESSION['errors'] = "Неверный логин или пароль администратора!";
-      redirect();
-    }
+foreach ($accounts as $account) {
+  if($admin_login == $account['login'] && $admin_password == $account['password']) {
+    $found = true;
     break;
   }
+}
+
+if(!$found) {
+  $_SESSION['errors'] = "Неверный логин или пароль администратора!";
+  redirect();
 }
 
 $serveradd = "ldaps://VMSrvDC2.skg.stavkraygaz.ru:636"; // domain controller
 $user = $account_login;
 $pass = $account_password;
 
-function resetpassword($serveradd,$user,$pass,$admingro) {
+//Функция сброса пароля
+function resetpassword($serveradd,$user,$pass) {
 $ldaprdn  = "CN=admchange,OU=Учётные записи администраторов,DC=skg,DC=stavkraygaz,DC=ru";
 $ldappass = "12qwaszxC";  // associated password
 $ldapconn = ldap_connect($serveradd);
+global $admin_login;
 ldap_set_option($ldapconn, LDAP_OPT_PROTOCOL_VERSION, 3);
 ldap_set_option($ldapconn, LDAP_OPT_REFERRALS, 0);
 
@@ -79,7 +81,7 @@ ldap_set_option($ldapconn, LDAP_OPT_REFERRALS, 0);
             $data2 = ldap_get_attributes($ldapconn, $first);
             $resultData2 = $data2["sAMAccountName"][0];
 
-            if (stripos($resultData2, $admingro) === false) {
+            if (stripos($resultData2, $admin_login) === false) {
               $_SESSION['errors'] = "У Вас нет прав для сброса пароля для данной учётной записи пользователя!";
               redirect();
             }
@@ -89,8 +91,8 @@ ldap_set_option($ldapconn, LDAP_OPT_REFERRALS, 0);
               redirect();
             }
 
-            if (mb_strlen($pass) <= 10 && preg_match('/[A-Z0-9]/', $pass)) {
-              $_SESSION['errors'] = "Пароль должен быть не менее 10 символов и иметь хотя бы одну заглавную букву и цифру!";
+            if (mb_strlen($pass) < 8 && preg_match('/[A-Z0-9]+/', $pass)) {
+              $_SESSION['errors'] = "Пароль должен быть не менее 8 символов и иметь хотя бы одну заглавную букву и цифру!";
               redirect();
             }
 
@@ -125,6 +127,6 @@ ldap_set_option($ldapconn, LDAP_OPT_REFERRALS, 0);
   }
 }
 
-resetpassword($serveradd,$user,$pass,$admingro)
+resetpassword($serveradd,$user,$pass)
           
 ?>
